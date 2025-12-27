@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (allow example, block actual env files)
+.env
+.env*.local
 
 # vercel
 .vercel
@@ -39,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# accidentally included files
+*player-script.js
+
+# parent directories (should be outside the repo)
+../audio_raw/
+../audio_processed/
