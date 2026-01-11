@@ -44,6 +44,5 @@ next-env.d.ts
 # accidentally included files
 *player-script.js
 
-# parent directories (should be outside the repo)
-../audio_raw/
-../audio_processed/
+# locally processed audio
+4udio7ool_audio/

@@ -3,8 +3,8 @@ import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 
 // Use environment variables for directory paths, with fallback for development
-const AUDIO_RAW_DIR = process.env.AUDIO_RAW_DIR || path.resolve('../audio_raw');
-const AUDIO_PROCESSED_DIR = process.env.AUDIO_PROCESSED_DIR || path.resolve('../audio_processed');
+const AUDIO_RAW_DIR = process.env.AUDIO_RAW_DIR || path.join(process.cwd(), '4udio7ool_audio', 'downloads');
+const AUDIO_PROCESSED_DIR = process.env.AUDIO_PROCESSED_DIR || path.join(process.cwd(), '4udio7ool_audio', 'processed');
 
 export interface AudioFile {
   name: string;

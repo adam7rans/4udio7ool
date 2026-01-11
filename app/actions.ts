@@ -45,7 +45,7 @@ export async function uploadFiles(formData: FormData) {
         const fs = require('fs');
         // Re-define raw dir here or export it from lib?
         // I'll just re-define or import constant if I exported it. I didn't export it.
-        const AUDIO_RAW_DIR = path.resolve('../audio_raw');
+        const AUDIO_RAW_DIR = path.join(process.cwd(), '4udio7ool_audio', 'downloads');
 
         if (!fs.existsSync(AUDIO_RAW_DIR)) {
             fs.mkdirSync(AUDIO_RAW_DIR, { recursive: true });
@@ -88,7 +88,7 @@ export async function downloadYouTubeAudio(url: string) {
             return { success: false, error: 'Invalid YouTube URL' };
         }
 
-        const AUDIO_RAW_DIR = path.resolve('../audio_raw');
+        const AUDIO_RAW_DIR = path.join(process.cwd(), '4udio7ool_audio', 'downloads');
         if (!fs.existsSync(AUDIO_RAW_DIR)) {
             fs.mkdirSync(AUDIO_RAW_DIR, { recursive: true });
         }
