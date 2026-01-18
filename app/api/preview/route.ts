@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
             return new NextResponse('File name required', { status: 400 });
         }
 
-        const AUDIO_RAW_DIR = process.env.AUDIO_RAW_DIR || path.resolve('../audio_raw');
+        const AUDIO_RAW_DIR = process.env.AUDIO_RAW_DIR || path.join(process.cwd(), '4udio7ool_audio', 'downloads');
         const PREVIEW_DIR = path.join(AUDIO_RAW_DIR, '.preview');
         const filePath = path.join(PREVIEW_DIR, fileName);
 

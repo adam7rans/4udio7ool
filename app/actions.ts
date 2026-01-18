@@ -1,6 +1,21 @@
 'use server';
 
 import { listAudioFiles, processAudioFile, ProcessOptions } from '@/lib/audio';
+import { getConfig, saveConfig } from '@/lib/storage-config';
+
+// Config Actions
+export async function getAudioConfig() {
+    return { success: true, config: getConfig() };
+}
+
+export async function updateAudioConfig(newConfig: { downloadDirectory?: string }) {
+    try {
+        const config = saveConfig(newConfig);
+        return { success: true, config };
+    } catch (error) {
+        return { success: false, error: 'Failed to save config' };
+    }
+}
 
 export async function getAudioFiles() {
     try {
@@ -43,9 +58,9 @@ export async function uploadFiles(formData: FormData) {
     try {
         const path = require('path');
         const fs = require('fs');
-        // Re-define raw dir here or export it from lib?
-        // I'll just re-define or import constant if I exported it. I didn't export it.
-        const AUDIO_RAW_DIR = path.join(process.cwd(), '4udio7ool_audio', 'downloads');
+        const { getDownloadDirectory } = require('@/lib/storage-config');
+
+        const AUDIO_RAW_DIR = getDownloadDirectory();
 
         if (!fs.existsSync(AUDIO_RAW_DIR)) {
             fs.mkdirSync(AUDIO_RAW_DIR, { recursive: true });
@@ -60,6 +75,7 @@ export async function uploadFiles(formData: FormData) {
         return { success: true };
     } catch (error) {
         console.error('Upload error:', error);
+        return { success: false, error: 'Upload failed' };
     }
 }
 
@@ -80,15 +96,16 @@ export async function downloadYouTubeAudio(url: string) {
         const { promisify } = require('util');
         const path = require('path');
         const fs = require('fs');
+        const { getDownloadDirectory } = require('@/lib/storage-config');
 
         const execFileAsync = promisify(execFile);
 
         // Basic YouTube URL validation
-        if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
-            return { success: false, error: 'Invalid YouTube URL' };
+        if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/') && !url.includes('kick.com')) {
+            return { success: false, error: 'Invalid URL. Supported: YouTube, Kick' };
         }
 
-        const AUDIO_RAW_DIR = path.join(process.cwd(), '4udio7ool_audio', 'downloads');
+        const AUDIO_RAW_DIR = getDownloadDirectory();
         if (!fs.existsSync(AUDIO_RAW_DIR)) {
             fs.mkdirSync(AUDIO_RAW_DIR, { recursive: true });
         }

@@ -20,6 +20,7 @@ export interface ProcessOptions {
   segmentDuration?: number; // in minutes
   targetSize?: number; // in MB
   bitrate?: string; // e.g. "192" for 192k
+  format?: string; // 'mp3', 'wav', 'aiff', 'aac'
 }
 
 export async function listAudioFiles(): Promise<AudioFile[]> {
@@ -32,7 +33,7 @@ export async function listAudioFiles(): Promise<AudioFile[]> {
   // Use Promise.all to fetch durations in parallel
   const audioFiles = await Promise.all(
     files
-      .filter(file => !file.startsWith('.') && /\.(mp3|wav|flac|m4a|aac|ogg|wma)$/i.test(file))
+      .filter(file => !file.startsWith('.') && /\.(mp3|wav|flac|m4a|aac|ogg|wma|mp4)$/i.test(file))
       .map(async (file) => {
         const filePath = path.join(AUDIO_RAW_DIR, file);
         const stats = fs.statSync(filePath);
@@ -68,7 +69,15 @@ export async function processAudioFile(options: ProcessOptions): Promise<string>
 
   // Determine base output name
   const nameWithoutExt = path.parse(options.fileName).name;
-  let outputPath = path.join(AUDIO_PROCESSED_DIR, `${nameWithoutExt}.mp3`);
+
+  // Determine output extension based on format
+  const format = options.format || 'mp3';
+  let ext = 'mp3';
+  if (format === 'wav') ext = 'wav';
+  else if (format === 'aiff') ext = 'aiff'; // or aif
+  else if (format === 'aac') ext = 'm4a'; // aac is usually in m4a container for wide support
+
+  let outputPath = path.join(AUDIO_PROCESSED_DIR, `${nameWithoutExt}.${ext}`);
 
   // 1. Basic Conversion & Compression Logic
   // If targetSize is set, we need to calculate bitrate.
@@ -76,7 +85,10 @@ export async function processAudioFile(options: ProcessOptions): Promise<string>
 
   let audioBitrate = options.bitrate ? `${options.bitrate}k` : '192k';
 
-  if (options.targetSize) {
+  // Only calculate bitrate for compressed formats
+  const isCompressed = ['mp3', 'aac', 'm4a'].includes(format);
+
+  if (isCompressed && options.targetSize) {
     console.log(`[AudioProcessor] Target Size enabled: ${options.targetSize} MB`);
     // We need to know duration to calculate bitrate
     const durationSec = await getDuration(inputPath);
@@ -95,7 +107,7 @@ export async function processAudioFile(options: ProcessOptions): Promise<string>
     } else {
       console.warn(`[AudioProcessor] Could not determine duration, defaulting to 192k`);
     }
-  } else {
+  } else if (isCompressed) {
     // If bitrate is provided explicitly, it is already set in audioBitrate variable above.
     console.log(`[AudioProcessor] Using bitrate: ${audioBitrate}`);
   }
@@ -105,22 +117,27 @@ export async function processAudioFile(options: ProcessOptions): Promise<string>
 
     console.log(`[AudioProcessor] Configuring FFmpeg...`);
 
-    if (options.convert || options.targetSize) {
-      console.log(`[AudioProcessor] Format: mp3, Bitrate: ${audioBitrate}`);
-      // Force mp3 if converting or targeting size (since we assume mp3 for calculations usually, though ideally user selects format)
-      // User asked: "convert each of the files ... into 192khz mp3"
-      // We will output mp3.
+    // Set format
+    console.log(`[AudioProcessor] Target Format: ${format}`);
+
+    if (format === 'mp3') {
       command.format('mp3');
       command.audioBitrate(audioBitrate);
-      // command.audioFrequency(44100); // Standard, user said 192khz which is likely bitrate, leaving frequency default or 44.1/48 is safe.
+    } else if (format === 'wav') {
+      command.format('wav');
+      // Wav is lossless, no bitrate needed strictly, usually pcm_s16le
+    } else if (format === 'aiff') {
+      command.format('aiff');
+    } else if (format === 'aac') {
+      command.format('adts'); // or just let ffmpeg detect from extension if outputting to file
+      // For m4a container usually ipod or just set codec
+      // simpler to specify output extension and let ffmpeg handle container, but we can enforce codec
+      // command.audioCodec('aac');
+      command.audioBitrate(audioBitrate);
     }
 
     if (options.segment && options.segmentDuration) {
       console.log(`[AudioProcessor] Segmentation enabled: ${options.segmentDuration} mins`);
-      // Use segment muxer
-      // ffmpeg -i in.mp3 -f segment -segment_time 600 -c copy out%03d.mp3
-      // If we are also converting, we can't use -c copy.
-      // We are strictly outputting mp3 here.
 
       command.outputOptions([
         '-f segment',
@@ -128,7 +145,7 @@ export async function processAudioFile(options: ProcessOptions): Promise<string>
         '-reset_timestamps 1'
       ]);
       // Output pattern
-      outputPath = path.join(AUDIO_PROCESSED_DIR, `${nameWithoutExt}_%03d.mp3`);
+      outputPath = path.join(AUDIO_PROCESSED_DIR, `${nameWithoutExt}_%03d.${ext}`);
       console.log(`[AudioProcessor] Output pattern: ${outputPath}`);
     } else {
       console.log(`[AudioProcessor] Output file: ${outputPath}`);
